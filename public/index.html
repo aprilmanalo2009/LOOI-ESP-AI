@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Gemini Live Robot Dashboard</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { background: #0c0d14; color: #f0f0f0; font-family: 'Segoe UI', system-ui, sans-serif; padding: 24px; display: flex; flex-direction: column; align-items: center; }
+    .container { max-width: 800px; width: 100%; }
+    header { text-align: center; margin-bottom: 24px; }
+    h1 { color: #00bfff; font-size: 1.8rem; }
+    .status-card { background: #151622; border: 1px solid #282a3a; border-radius: 12px; padding: 16px; margin-bottom: 16px; display: flex; justify-content: space-between; align-items: center; }
+    .badge { padding: 4px 12px; border-radius: 20px; font-size: 0.85rem; font-weight: 600; background: #2a2a3a; color: #aaa; }
+    .badge.online { background: #00e5a022; color: #00e5a0; border: 1px solid #00e5a055; }
+    .logs { background: #08090e; border: 1px solid #1a1c2a; border-radius: 8px; padding: 12px; height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.85rem; color: #88ff88; }
+    .log-line { margin-bottom: 4px; word-break: break-all; }
+    .controls { display: flex; gap: 12px; margin-top: 16px; }
+    button { flex: 1; padding: 12px; background: #00bfff; color: #000; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
+    button:hover { background: #0099cc; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🤖 Gemini Live Robot Control</h1>
+      <p style="color: #666;">Realtime Audio VAD & Soft Movement Bridge</p>
+    </header>
+
+    <div class="status-card">
+      <div>
+        <strong>ESP32 / Backend Status</strong>
+        <p style="font-size: 0.8rem; color: #888;" id="status-sub">Checking API Key Pool...</p>
+      </div>
+      <span class="badge" id="status-badge">DISCONNECTED</span>
+    </div>
+
+    <div class="logs" id="log-box">
+      <div class="log-line">[System] Dashboard initialized. Ready for connections.</div>
+    </div>
+
+    <div class="controls">
+      <button onclick="checkStatus()">Refresh Status</button>
+      <button onclick="clearLogs()" style="background: #333; color: #fff;">Clear Console</button>
+    </div>
+  </div>
+
+  <script>
+    const logBox = document.getElementById('log-box');
+    const badge = document.getElementById('status-badge');
+    const statusSub = document.getElementById('status-sub');
+
+    function log(msg) {
+      const line = document.createElement('div');
+      line.className = 'log-line';
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      logBox.appendChild(line);
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    function clearLogs() {
+      logBox.innerHTML = '';
+      log('[System] Console cleared.');
+    }
+
+    async function checkStatus() {
+      try {
+        const res = await fetch('/api/gemini/status');
+        const data = await res.json();
+        if (data.ok) {
+          badge.className = 'badge online';
+          badge.textContent = 'ONLINE';
+          statusSub.textContent = `API Key Pool: ${data.available}/${data.total} Available`;
+          log(`Status check: Server healthy, ${data.available} active keys.`);
+        } else {
+          badge.className = 'badge';
+          badge.textContent = 'NO KEYS';
+          statusSub.textContent = 'API keys exhausted or missing';
+          log('Warning: No active Gemini API keys available.');
+        }
+      } catch (e) {
+        badge.className = 'badge';
+        badge.textContent = 'OFFLINE';
+        statusSub.textContent = 'Backend unreachable';
+        log('Error: Failed to reach backend server.');
+      }
+    }
+
+    checkStatus();
+    setInterval(checkStatus, 10000);
+  </script>
+</body>
+</html>
